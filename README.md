@@ -33,6 +33,15 @@ pico-flash          # Pico を BOOTSEL モードで繋いでおく
 pico-mon
 ```
 
+Picoprobe/debugprobe で SWD デバッグをするときだけ、openocd 入りの別シェルを使う:
+
+```sh
+nix develop github:lemonade-2061/pico-dev#debug
+```
+
+既定のシェルに openocd を入れていないのは、`openocd-rp2040` が GTK4 / SDL /
+zenity を引きずって閉包が 0.8GB 増えるため（実測 3.4GiB → 4.2GiB）。
+
 `pico-new` は `.envrc` も置くので、[direnv](https://direnv.net/) があれば
 `direnv allow` 以降は `cd` しただけで shell に入る。
 
@@ -91,13 +100,40 @@ USB passthrough が要らないので設定が軽い。`pico-flash` が WSL を�
    wsl --install -d Ubuntu
    ```
 
-2. Ubuntu の中で Nix を入れる（flakes を有効化）:
+2. Ubuntu の中で Nix を入れる。
+
+   **ここだけ WSL 固有の罠がある。** Nix の通常インストール（マルチユーザー =
+   `--daemon`）は `nix-daemon` を systemd サービスとして登録するので、WSL で
+   systemd が無効だと失敗する。まず確認する:
 
    ```sh
+   systemctl is-system-running     # running / degraded なら有効
+                                   # "Failed to connect to bus" なら無効
+   ```
+
+   無効だったら有効にする（`wsl --install` で入れた最近の Ubuntu は既定で有効）:
+
+   ```sh
+   printf '[boot]\nsystemd=true\n' | sudo tee -a /etc/wsl.conf
+   # PowerShell で wsl --shutdown して入り直す
+   ```
+
+   そのうえでインストール:
+
+   ```sh
+   # 公式インストーラ (systemd 有効が前提)
    sh <(curl -L https://nixos.org/nix/install) --daemon
-   # シェルを開き直してから
+   # シェルを開き直してから flakes を有効化
    mkdir -p ~/.config/nix
    echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
+   ```
+
+   systemd を触りたくない場合は `--no-daemon`（シングルユーザー）でも動く。
+   判断を丸投げしたいなら Determinate Systems のインストーラが WSL の
+   systemd 有無を見て振り分け、flakes も有効にしてくれる:
+
+   ```sh
+   curl -fsSL https://install.determinate.systems/nix | sh -s -- install
    ```
 
 3. 環境に入ってビルド:
@@ -130,6 +166,12 @@ USB passthrough が要らないので設定が軽い。`pico-flash` が WSL を�
    デバイスマネージャー →「ポート (COM と LPT)」で COM 番号を確認し、
    TeraTerm / PuTTY / Arduino IDE のシリアルモニタで **115200 bps**。
 
+**容量と時間の目安:** 初回の `nix develop` で nix store が 3.4GiB ほどになる
+（転送は圧縮されるのでダウンロード量はこれより少ない）。WSL の仮想ディスクは
+一度膨らむと自動では縮まないので、空きは 10GB ほど見ておく。縮めたいときは
+新しめの WSL なら `wsl --manage <ディストロ名> --set-sparse true`、
+古い WSL なら `diskpart` の `compact vdisk`。
+
 この案では `pico-mon` と `picotool` は使えない（WSL から USB が見えないため）。
 `pico-build` までが Nix の担当、書き込みと表示は Windows 側という分担になる。
 
@@ -156,7 +198,7 @@ WSL 側で udev ルールが要るので、上の「その他の Linux」の手�
 
 | ファイル | 役目 |
 | --- | --- |
-| `flake.nix` | 配線だけ。`devShells.{default,pico}` と `nixosModules.default` を公開 |
+| `flake.nix` | 配線だけ。`devShells.{default,pico,debug}` と `nixosModules.default` を公開 |
 | `shell.nix` | devShell 本体。ツール一式と `pico-*` コマンドの実装 |
 | `module.nix` | NixOS モジュール（udev ルール + dialout/plugdev） |
 | `flake.lock` | nixpkgs を固定。手元で動いた組み合わせがそのまま再現される |

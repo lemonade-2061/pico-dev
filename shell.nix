@@ -22,6 +22,10 @@
   # pico-new が生成する .envrc (direnv) が指す flake。clone して使う場合や
   # fork した場合はここを上書きする。
   flakeRef ? "github:lemonade-2061/pico-dev",
+  # Picoprobe/debugprobe 経由の SWD デバッグ (openocd)。閉包が 0.8GB 増える
+  # (openocd-rp2040 が GTK4 / SDL / zenity を引きずる) ので既定では入れない。
+  # 必要なときは `nix develop github:lemonade-2061/pico-dev#debug`。
+  withOpenocd ? false,
 }:
 
 let
@@ -317,12 +321,12 @@ pkgs.mkShell {
     python3 # SDK のビルドスクリプトが使う
     clang-tools # clangd (nvim の LSP)
     tio # シリアルモニタ
-    openocd-rp2040 # Picoprobe 経由の SWD デバッグ用 (任意)
     pico-new
     pico-build
     pico-flash
     pico-mon
-  ];
+  ]
+  ++ pkgs.lib.optional withOpenocd pkgs.openocd-rp2040;
 
   # 拡張機能が ~/.pico-sdk に 2GB ダウンロードする代わりに、
   # nix store 上の SDK を指す (読み取り専用・世代管理される)。

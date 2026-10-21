@@ -29,6 +29,11 @@
         default = import ./shell.nix { inherit pkgs; };
         # `nix develop ...#pico` でも入れるように別名を残す
         pico = default;
+        # SWD デバッグ (openocd) つき。閉包が 0.8GB 増えるので別出口にしてある
+        debug = import ./shell.nix {
+          inherit pkgs;
+          withOpenocd = true;
+        };
       });
 
       # root 権限が必要な部分 (udev ルール / シリアルのグループ)
