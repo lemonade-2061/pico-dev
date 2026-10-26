@@ -109,6 +109,16 @@ Nix に興味が無いなら無理に移る必要はない。
 USB passthrough が要らないので設定が軽い。`pico-flash` が WSL を検出して
 自動でこの経路に切り替わる。
 
+**最短手順** — PowerShell（管理者）で `wsl --install -d Ubuntu` → 再起動 →
+Ubuntu を開いて次の1行。下の 1〜3 を全部やってくれる（途中で「WSL を再起動して
+もう一度」と言われたらそのとおりにする）:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/lemonade-2061/pico-dev/master/wsl-setup.sh | bash
+```
+
+以下は中で何をしているかの手動版。
+
 1. PowerShell（管理者）で WSL2 を入れて再起動:
 
    ```powershell
