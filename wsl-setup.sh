@@ -46,6 +46,14 @@ fi
 [ -e "$NIX_PROFILE_SH" ] && . "$NIX_PROFILE_SH"
 command -v nix >/dev/null || die "nix が見つからない。Ubuntu を開き直してもう一度実行する"
 
+# 公式インストーラ等で先に入っていた場合は flakes が無効なままなので有効にする
+# (nix-command が無効だと config show 自体が失敗するので、両方まとめて判定できる)
+if ! nix config show experimental-features 2>/dev/null | grep -qw flakes; then
+  say "nix-command / flakes を有効にする (~/.config/nix/nix.conf)"
+  mkdir -p ~/.config/nix
+  echo 'experimental-features = nix-command flakes' >>~/.config/nix/nix.conf
+fi
+
 # 4. 環境を先にダウンロードしておく (初回は 3.4GiB 程度、数分〜十数分)
 say "Pico の開発環境をダウンロードする"
 nix develop "$FLAKE" --command true
