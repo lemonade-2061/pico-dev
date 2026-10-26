@@ -46,6 +46,22 @@ fi
 [ -e "$NIX_PROFILE_SH" ] && . "$NIX_PROFILE_SH"
 command -v nix >/dev/null || die "nix が見つからない。Ubuntu を開き直してもう一度実行する"
 
+# デーモンのソケットが nix-users 限定になっている環境では、グループに入らないと
+# "daemon-socket/socket: Permission denied" で何もできない
+if [ "$(stat -c %G /nix/var/nix/daemon-socket 2>/dev/null)" = nix-users ] &&
+  ! id -nG | grep -qw nix-users; then
+  say "$USER を nix-users グループに入れる (sudo のパスワードを聞かれる)"
+  sudo usermod -aG nix-users "$USER"
+  cat <<'EOF'
+
+nix-users グループに入れた。反映には入り直しが要る:
+  1. このウィンドウを閉じる
+  2. PowerShell で  wsl --terminate Ubuntu
+  3. Ubuntu を開き直して、同じコマンドをもう一度実行
+EOF
+  exit 0
+fi
+
 # 公式インストーラ等で先に入っていた場合は flakes が無効なままなので有効にする
 # (nix-command が無効だと config show 自体が失敗するので、両方まとめて判定できる)
 if ! nix config show experimental-features 2>/dev/null | grep -qw flakes; then
